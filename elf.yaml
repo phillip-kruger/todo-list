@@ -1,63 +1,171 @@
-# A House Elves elf: what Elf Desk needs to install, set up and run my-elf. AGENTS.md says what each field means.
-name: my-elf
-title: My elf
+# A House Elves elf: what Elf Desk needs to install, set up and run todo-list. AGENTS.md says what each field means.
+name: todo-list
+title: Todo list
 version: 0.1.0
-author: "@your-login"
-description: Reads a news feed and lists what's new since you last looked, for its tab.
-main: MyElf.java
-config: ~/.config/my-elf/config
-tools: [claude]
+author: "@phillip-kruger"
+description: Keeps your todo list on the desk, with who asked, due dates, a checklist, an AI opinion on any item, and GitHub issues created from a todo or its steps in one click.
+main: TodoList.java
+config: ~/.config/todo-list/config
+tools: [gh, claude]
 
 # What it reads and writes, in plain words: the desk shows these before you install it, so they must be true and
 # complete. Name every place outside this machine it reaches, and say when it waits for your click.
 reads:
-  - The feed you give it (RSS or Atom), over the internet.
-  - When Sum up is on, the feed's new items (Claude reads them, with no tools).
+  - Your todo list, which it keeps on this machine.
+  - The repos in its settings on GitHub, as your gh account. When you click Ask AI with a repo picked, an agent (the runner's, in its sandbox, after a safety check, able only to read) reads a fresh clone of that repo. When you also tick Search the web (public repos only), that agent searches and reads the web too, so what it searches for goes to the web. Each morning it checks whether the issues linked to your todos are still open, and when you click Link issue it reads that issue.
+  - Claude reads a todo's text when you click Ask AI or Create issue, to give its opinion or draft the issue and suggest a repo.
 writes:
-  - Nothing outside this machine. What it read is saved for its tab on the desk.
+  - Your todo list and the AI's reports, on this machine.
+  - A new GitHub issue in the repo you choose, as your gh account, only when you click Create issue and confirm it.
 
 settings:
-  - key: FEED_URL
-    label: Feed
-    help: The address of an RSS or Atom feed, like https://quarkus.io/feed.xml.
-    kind: text
-  - key: MAX_ITEMS
-    label: Items to show
-    help: The newest this many from each read.
+  - key: GITHUB_LOGIN
+    label: GitHub account
+    help: The account it creates issues as and reads them with. Its token comes from gh (gh auth login).
+    kind: login
+    default: ${github-user}
+  - key: REPOS
+    label: Repos
+    help: The repos it may suggest and create issues in, and clone for the AI to read, like owner/name, owner/other.
+    kind: repos
+    default: ""
+    optional: true
+  - key: DUE_SOON_DAYS
+    label: Due soon (days)
+    help: A todo due within this many days shows as due soon on the card.
+    kind: int
+    min: 0
+    max: 60
+    default: "2"
+  - key: KEEP_DONE_DAYS
+    label: Keep done items (days)
+    help: Done todos are removed from the list after this many days.
     kind: int
     min: 1
-    max: 200
+    max: 3650
     default: "30"
-  - key: SUM_UP
-    label: Sum up with Claude
-    help: A line or two about what's new, on top of the list.
-    kind: bool
-    default: "false"
 
 commands:
-  read:
-    label: Read the feed
+  check:
+    label: Check issues
     args: [--save]
   dry-run:
-    label: Read without saving
+    label: Check without saving
     args: []
 
 dry-run: dry-run
 
-# Its tab (and dashboard card), drawn by ui/my-elf.js in the desk's sandboxed frame. It reads only what it saved.
+# Its tab (and dashboard card), drawn by ui/todo-list.js in the desk's sandboxed frame. It reads only your list and
+# the AI's reports.
 tab:
-  page: ui/my-elf.js
+  page: ui/todo-list.js
   card: true
 refresh:
-  command: read
+  command: check
   schedule: "Mon..Fri *-*-* 07:00"
-data: [runs, done]
+data: [todos]
+# Ask AI with a repo starts a read-only agent; its report is in ~/.config/todo-list/agents, which the tab reads.
+agents: true
 
 actions:
-  done:
-    label: Mark an item read
-    args: [--action=done]
+  # Adding, editing, marking done and deleting change only the list on this machine: no asking first.
+  save-todo:
+    label: Save a todo
+    args: [--action=save-todo]
     ask: false
     params:
-      # Every value is checked against its pattern before the elf sees it: keep patterns as tight as the value allows.
-      id: {max: 500, pattern: "\\P{Cntrl}{1,500}"}
+      id: {pattern: "t[0-9]{10,16}", optional: true}
+      what: {pattern: "\\P{Cntrl}{1,300}", max: 300}
+      who: {pattern: "\\P{Cntrl}{0,100}", max: 100, optional: true}
+      description: {pattern: "[\\s\\S]{0,20000}", max: 20000, optional: true}
+      due: {pattern: "(\\d{4}-\\d{2}-\\d{2})?", optional: true}
+  set-done:
+    label: Mark a todo done
+    args: [--action=set-done]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      done: {kind: bool}
+  delete-todo:
+    label: Delete a todo
+    args: [--action=delete-todo]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+  suggest-repo:
+    label: Suggest a repo for Ask AI
+    args: [--action=suggest-repo]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+  ask-ai:
+    label: Ask AI
+    args: [--action=ask-ai]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      mode: {one-of: [investigate, opinion]}
+      # One of your repos, or empty for Claude to answer from the todo's text alone.
+      repo: {pattern: "([A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100})?", optional: true}
+      # The agent also searches and reads the web: only with a public repo picked, which the runner checks.
+      web: {kind: bool, optional: true}
+  draft-issue:
+    label: Draft an issue from a todo or a step of its checklist
+    args: [--action=draft-issue]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      item: {pattern: "(c[0-9]{10,16})?", optional: true}
+  create-issue:
+    label: Create issue
+    confirm: "Create the issue \"{title}\" in {repo} on GitHub, as you?"
+    args: [--action=create-issue]
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      # A step of its checklist the issue is for; empty for the todo itself.
+      item: {pattern: "(c[0-9]{10,16})?", optional: true}
+      repo: {pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+      title: {pattern: "\\P{Cntrl}{1,256}", max: 256}
+      body: {pattern: "[\\s\\S]{0,60000}", max: 60000}
+  # Linking and unlinking an issue that's already there change only the list on this machine (GitHub is only read).
+  link-issue:
+    label: Link issue
+    args: [--action=link-issue]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      item: {pattern: "(c[0-9]{10,16})?", optional: true}
+      repo: {pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+      number: {kind: int}
+  unlink-issue:
+    label: Unlink issue
+    args: [--action=unlink-issue]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      repo: {pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
+      number: {kind: int}
+  # The checklist: steps of a todo, on this machine only.
+  save-item:
+    label: Save a checklist step
+    args: [--action=save-item]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      item: {pattern: "(c[0-9]{10,16})?", optional: true}
+      text: {pattern: "\\P{Cntrl}{1,300}", max: 300}
+  check-item:
+    label: Tick a checklist step
+    args: [--action=check-item]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      item: {pattern: "c[0-9]{10,16}"}
+      done: {kind: bool}
+  delete-item:
+    label: Delete a checklist step
+    args: [--action=delete-item]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      item: {pattern: "c[0-9]{10,16}"}
