@@ -81,7 +81,18 @@ class TodoListTab extends LitElement {
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
         input, textarea, select { font: inherit; color: var(--ink); }
-        textarea { min-height: 5em; resize: vertical; }
+        /* The desk's shared styles leave text fields to the browser, so give them the desk's look here. */
+        input:not([type="checkbox"]):not([type="radio"]), textarea, select {
+            box-sizing: border-box; width: 100%; min-width: 0; padding: 8px 11px; font-size: 14px;
+            background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-control, 9px);
+            color-scheme: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+        input:not([type="checkbox"]):not([type="radio"]):hover, textarea:hover, select:hover { border-color: var(--muted); }
+        input:not([type="checkbox"]):not([type="radio"]):focus, textarea:focus, select:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        input:disabled, textarea:disabled, select:disabled { opacity: 0.6; cursor: not-allowed; }
+        input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.8; }
+        input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+        textarea { min-height: 5em; resize: vertical; line-height: 1.5; }
         textarea.body { min-height: 14em; }
         .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }

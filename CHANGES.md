@@ -3,6 +3,11 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.1.1
+
+- Fixed: the text boxes, date picker and drop-downs now look like the rest of the desk, with rounded corners,
+  the desk's colours in light and dark, and a clear outline on the one you're typing in.
+
 ## 0.1.0
 
 - Keeps your todo list on the desk: what, who asked, a description and a delivery date, soonest first, with overdue

@@ -1,7 +1,7 @@
 # A House Elves elf: what Elf Desk needs to install, set up and run todo-list. AGENTS.md says what each field means.
 name: todo-list
 title: Todo list
-version: 0.1.0
+version: 0.1.1
 author: "@phillip-kruger"
 description: Keeps your todo list on the desk, with who asked, due dates, a checklist, an AI opinion on any item, and GitHub issues created from a todo or its steps in one click.
 main: TodoList.java
