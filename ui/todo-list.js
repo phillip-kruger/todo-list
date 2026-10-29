@@ -70,6 +70,7 @@ class TodoListTab extends LitElement {
         _stepEdit: { state: true },
         _agents: { state: true },
         _busy: { state: true },
+        _expanded: { state: true },
     };
 
     static styles = [shared, markdownStyles, css`
@@ -127,6 +128,15 @@ class TodoListTab extends LitElement {
         .step-edit { display: flex; gap: 8px; padding: 0; grid-column: 1 / -1; }
         .step-edit input { flex: 1; }
         .empty { color: var(--muted); padding: 18px; margin: 0; }
+        /* A todo is folded to its heading until you click it. */
+        button.head { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px;
+            align-items: baseline; cursor: pointer; border-radius: 6px; }
+        button.head:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+        button.head:hover .what { color: var(--accent); }
+        .chevron { color: var(--muted); font-size: 12px; transition: transform 0.15s; display: inline-block; }
+        .head[aria-expanded="true"] .chevron { transform: rotate(90deg); }
+        .head-body { display: grid; gap: 6px; }
+        .head-title { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         details.done-list > summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
         .skeleton.big { height: 30vh; }
         .top-buttons { display: flex; gap: 8px; align-items: center; }
@@ -145,6 +155,7 @@ class TodoListTab extends LitElement {
         this._form = { what: '', who: '', description: '', due: '' };
         this._agents = {};
         this._steps = {};
+        this._expanded = {};
         this._soon = 2;
         this._repos = [];
     }
@@ -210,6 +221,11 @@ class TodoListTab extends LitElement {
             this._form = { what: '', who: '', description: '', due: '' };
             this._closeAdd();
         }
+    }
+
+    _toggle(id) {
+        const { [id]: was, ...rest } = this._expanded;
+        this._expanded = was ? rest : { ...rest, [id]: true };
     }
 
     _openAdd() {
@@ -484,19 +500,33 @@ class TodoListTab extends LitElement {
         const issues = (t.issues ?? []).filter(i => !i.item || !(t.checklist ?? []).some(c => c.id === i.item));
         const all = t.issues ?? [];
         const allClosed = all.length && all.every(i => i.state === 'closed');
+        const items = t.checklist ?? [];
+        const expanded = !!this._expanded[t.id];
+        // Folded, a todo shows only its heading: click it for the rest.
+        const head = html`<button class="head" aria-expanded=${expanded ? 'true' : 'false'} title=${expanded ? 'Fold it' : 'Show all of it'}
+                @click=${() => this._toggle(t.id)}>
+            <span class="chevron" aria-hidden="true">▶</span>
+            <span class="head-body">
+                <span class="head-title">
+                    <span class="what">${t.what}</span>
+                    ${due === 'overdue' ? html`<span class="flag overdue">Overdue</span>` : due === 'today' ? html`<span class="flag today">Due today</span>`
+                        : due === 'soon' ? html`<span class="flag soon">Due soon</span>` : ''}
+                    ${allClosed && !t.done ? html`<span class="flag closed">${all.length === 1 ? 'Issue closed' : 'All issues closed'}</span>` : ''}
+                </span>
+                <span class="meta">
+                    ${t.who ? html`<span>Asked by ${t.who}</span>` : ''}
+                    <span>Added ${ago(t.created)}</span>
+                    ${t.due ? html`<span>Due ${dayText(t.due)}</span>` : ''}
+                    ${t.done ? html`<span>Done ${ago(t.done)}</span>` : ''}
+                    ${!expanded && items.length ? html`<span>Checklist ${items.filter(i => i.done).length} of ${items.length}</span>` : ''}
+                    ${!expanded && all.length ? html`<span>${count(all.length, 'issue')}</span>` : ''}
+                    ${!expanded && reports.length ? html`<span>${count(reports.length, 'AI report')}</span>` : ''}
+                </span>
+            </span>
+        </button>`;
+        if (!expanded) return html`<li class="panel ${t.done ? 'done' : due}">${head}</li>`;
         return html`<li class="panel ${t.done ? 'done' : due}">
-            <div class="buttons">
-                <span class="what">${t.what}</span>
-                ${due === 'overdue' ? html`<span class="flag overdue">Overdue</span>` : due === 'today' ? html`<span class="flag today">Due today</span>`
-                    : due === 'soon' ? html`<span class="flag soon">Due soon</span>` : ''}
-                ${allClosed && !t.done ? html`<span class="flag closed">${all.length === 1 ? 'Issue closed' : 'All issues closed'}</span>` : ''}
-            </div>
-            <div class="meta">
-                ${t.who ? html`<span>Asked by ${t.who}</span>` : ''}
-                <span>Added ${ago(t.created)}</span>
-                ${t.due ? html`<span>Due ${dayText(t.due)}</span>` : ''}
-                ${t.done ? html`<span>Done ${ago(t.done)}</span>` : ''}
-            </div>
+            ${head}
             ${issues.length ? html`<div class="issues">${issues.map(i => this._issueLink(t, i, !t.done))}</div>` : ''}
             ${t.description ? html`<div class="desc md">${markdown(t.description)}</div>` : ''}
             ${this._checklist(t)}

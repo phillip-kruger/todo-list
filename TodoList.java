@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  * or links ones that are already there. Its refresh (--save) checks whether the linked issues are still open and
  * removes old done todos; without --save it only prints what it would change (the desk's dry run).
  */
-@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.2.0", description = "Keeps your todo list for Elf Desk")
+@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.3.0", description = "Keeps your todo list for Elf Desk")
 public class TodoList implements Callable<Integer> {
 
     static final ObjectMapper JSON = new ObjectMapper();

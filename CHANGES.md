@@ -3,6 +3,12 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.3.0
+
+- New: each todo is folded to a single line, with what it is, who asked, its dates and flags, and how many checklist
+  steps, issues and AI reports it has. Click it to open the whole todo; click it again to fold it. A long list now
+  fits on one screen.
+
 ## 0.2.0
 
 - New: Add todo is now a button at the top of the page that opens the form in a pop-up, so your list gets the

@@ -9,7 +9,9 @@ issues created from a todo or its steps in one click.
 - **Add todo:** the button at the top opens a pop-up for what you have to do, and optionally who asked, a description
   (Markdown) and a delivery date. The create date is filled in for you. Edit, Mark done and Delete work straight away: nothing leaves your machine.
 - **The list:** open todos, soonest delivery date first, then the ones with no date. Overdue ones are flagged. Each
-  shows who asked, how old it is, and links to its GitHub issues. Done ones fold away under **Done**, and are removed
+  is folded to one line: what it is, who asked, how old it is, its due date, and how many steps, issues and AI
+  reports it has. Click it to open it, with its description, checklist, issue links, reports and buttons, and again
+  to fold it. Done ones fold away under **Done**, and are removed
   after **Keep done items** days.
 - **Checklist:** each todo can have steps to tick off. A step can have its own GitHub issue.
 - **Ask AI:** pick **Investigate** or **Give an opinion**, and one of your repos for context (the one the AI suggests
