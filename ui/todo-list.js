@@ -127,6 +127,10 @@ class TodoListTab extends LitElement {
         .step.ticked { color: var(--muted); text-decoration: line-through; }
         .step-edit { display: flex; gap: 8px; padding: 0; grid-column: 1 / -1; }
         .step-edit input { flex: 1; }
+        /* Adding a step stays short, so it reads as part of the checklist and not as the todo's own buttons. */
+        .step-edit.add { max-width: 520px; }
+        /* The todo's own buttons sit apart from its checklist, under a line of their own. */
+        .todo-buttons { border-top: 1px solid var(--line, #e3e5e8); padding-top: 12px; margin-top: 6px; }
         .empty { color: var(--muted); padding: 18px; margin: 0; }
         /* A todo is folded to its heading until you click it. */
         button.head { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px;
@@ -481,7 +485,7 @@ class TodoListTab extends LitElement {
                     ${this._link?.id === t.id && this._link.item === i.id ? this._linkBox() : ''}
                 </li>`;
             })}</ul>` : ''}
-            ${open ? html`<form class="step-edit" @submit=${e => this._addStep(e, t)}>
+            ${open ? html`<form class="step-edit add" @submit=${e => this._addStep(e, t)}>
                 <input maxlength="300" placeholder="Add a step" aria-label="Add a step to the checklist" .value=${this._steps[t.id] ?? ''}
                     @input=${e => { this._steps = { ...this._steps, [t.id]: e.target.value }; }}>
                 <button type="submit" class="quiet" ?disabled=${!(this._steps[t.id] ?? '').trim()}>Add step</button>
@@ -530,7 +534,7 @@ class TodoListTab extends LitElement {
             ${issues.length ? html`<div class="issues">${issues.map(i => this._issueLink(t, i, !t.done))}</div>` : ''}
             ${t.description ? html`<div class="desc md">${markdown(t.description)}</div>` : ''}
             ${this._checklist(t)}
-            <div class="buttons">
+            <div class="buttons todo-buttons">
                 ${t.done ? html`<button class="quiet" @click=${() => this._act('set-done', { id: t.id, done: false }, "Couldn't change it")}>Not done</button>`
                     : html`<button @click=${() => this._act('set-done', { id: t.id, done: true }, "Couldn't mark it done")}>Mark done</button>
                         <button class="quiet" @click=${() => this._openAsk(t)}>Ask AI</button>

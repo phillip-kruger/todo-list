@@ -3,6 +3,12 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.3.1
+
+- Fixed: an open todo's buttons (Mark done, Ask AI and the rest) no longer sit right under Add a step. They have a
+  line of their own above them, and the Add a step box is shorter, so it's clear which buttons belong to the
+  checklist and which to the todo.
+
 ## 0.3.0
 
 - New: each todo is folded to a single line, with what it is, who asked, its dates and flags, and how many checklist
