@@ -3,6 +3,11 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.2.0
+
+- New: Add todo is now a button at the top of the page that opens the form in a pop-up, so your list gets the
+  whole page. Cancel or Esc closes it and keeps what you typed for next time.
+
 ## 0.1.1
 
 - Fixed: the text boxes, date picker and drop-downs now look like the rest of the desk, with rounded corners,

@@ -129,6 +129,13 @@ class TodoListTab extends LitElement {
         .empty { color: var(--muted); padding: 18px; margin: 0; }
         details.done-list > summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
         .skeleton.big { height: 30vh; }
+        .top-buttons { display: flex; gap: 8px; align-items: center; }
+        /* Add todo is a pop-up, so the list keeps the whole page. */
+        dialog.add { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; color: var(--ink);
+            background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 14px;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25); }
+        dialog.add::backdrop { background: rgba(0, 0, 0, 0.35); }
+        dialog.add form { padding: 20px 22px; }
     `];
 
     constructor() {
@@ -199,14 +206,26 @@ class TodoListTab extends LitElement {
         this._busy = null;
         if (!ok) return;
         if (id) this._editing = null;
-        else this._form = { what: '', who: '', description: '', due: '' };
+        else {
+            this._form = { what: '', who: '', description: '', due: '' };
+            this._closeAdd();
+        }
+    }
+
+    _openAdd() {
+        // showModal focuses the first field (it has autofocus); what you typed before is kept.
+        this.renderRoot.querySelector('dialog.add')?.showModal();
+    }
+
+    _closeAdd() {
+        this.renderRoot.querySelector('dialog.add')?.close();
     }
 
     _fields(form, set, id) {
-        return html`<form class=${id ? '' : 'panel'} @submit=${e => this._save(e, form, id)}>
+        return html`<form @submit=${e => this._save(e, form, id)}>
             ${id ? '' : html`<h2>Add todo</h2>`}
             <label>What you have to do
-                <input required maxlength="300" .value=${form.what} @input=${e => set({ ...form, what: e.target.value })}></label>
+                <input required maxlength="300" ?autofocus=${!id} .value=${form.what} @input=${e => set({ ...form, what: e.target.value })}></label>
             <div class="row">
                 <label>Who asked (optional)
                     <input maxlength="100" .value=${form.who} @input=${e => set({ ...form, who: e.target.value })}></label>
@@ -217,7 +236,7 @@ class TodoListTab extends LitElement {
                 <textarea maxlength="20000" .value=${form.description} @input=${e => set({ ...form, description: e.target.value })}></textarea></label>
             <div class="buttons">
                 <button type="submit" ?disabled=${!form.what.trim() || this._busy === (id ?? 'add')}>${id ? 'Save' : 'Add todo'}</button>
-                ${id ? html`<button type="button" class="quiet" @click=${() => { this._editing = null; }}>Cancel</button>` : ''}
+                <button type="button" class="quiet" @click=${() => { if (id) this._editing = null; else this._closeAdd(); }}>Cancel</button>
             </div>
         </form>`;
     }
@@ -513,16 +532,19 @@ class TodoListTab extends LitElement {
                     <p class="sub">${this._loading && !this._list ? '' : todos.length
                         ? `${open.length} open${overdue ? `, ${overdue} overdue` : ''}.${this._list.checkedAt ? ` Issues checked ${runTime(this._list.checkedAt).toLowerCase()}.` : ''}`
                         : 'Nothing on your list yet.'}</p>
-                </div>${settingsButton(null, 'Todo list settings')}</div>
+                </div><div class="top-buttons">
+                    <button @click=${() => this._openAdd()}>Add todo</button>
+                    ${settingsButton(null, 'Todo list settings')}
+                </div></div>
                 <elf-run-bar command="check" label="Check issues"
                     note="Checks whether the issues linked to your todos are still open, and updates the overdue flags. Changes nothing on GitHub."
                     @run-finished=${() => this._load()}></elf-run-bar>
                 ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : ''}
-                ${this._fields(this._form, form => { this._form = form; })}
+                <dialog class="add" aria-label="Add todo">${this._fields(this._form, form => { this._form = form; })}</dialog>
                 ${this._loading && !this._list ? html`<div class="skeleton big"></div>`
                     : open.length ? html`<ul>${open.map(t => this._item(t))}</ul>`
                     : html`<p class="panel empty">${done.length ? 'Nothing open: everything on your list is done.'
-                        : 'Add your first todo above. Add your repos in Settings to create issues from todos and let the AI read their code.'}</p>`}
+                        : 'Click Add todo to add your first one. Add your repos in Settings to create issues from todos and let the AI read their code.'}</p>`}
                 ${done.length ? html`<details class="done-list"><summary>Done (${done.length})</summary>
                     <ul>${done.map(t => this._item(t))}</ul></details>` : ''}
             </div>

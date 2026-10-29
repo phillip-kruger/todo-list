@@ -6,8 +6,8 @@ A [House Elves](https://github.com/House-elves) elf for [Elf Desk](https://githu
 list** keeps your todo list on the desk, with who asked, due dates, a checklist, an AI opinion on any item, and GitHub
 issues created from a todo or its steps in one click.
 
-- **Add todo:** what you have to do, and optionally who asked, a description (Markdown) and a delivery date. The
-  create date is filled in for you. Edit, Mark done and Delete work straight away: nothing leaves your machine.
+- **Add todo:** the button at the top opens a pop-up for what you have to do, and optionally who asked, a description
+  (Markdown) and a delivery date. The create date is filled in for you. Edit, Mark done and Delete work straight away: nothing leaves your machine.
 - **The list:** open todos, soonest delivery date first, then the ones with no date. Overdue ones are flagged. Each
   shows who asked, how old it is, and links to its GitHub issues. Done ones fold away under **Done**, and are removed
   after **Keep done items** days.
