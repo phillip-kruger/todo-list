@@ -3,6 +3,12 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.4.0
+
+- New: Start a session on a todo opens Sessions (which comes with the desk) with the todo as the session's goal, and
+  the todo keeps a link to it: Open session takes you back. In Sessions, Link a todo brings you here to pick the todo
+  a session is about.
+
 ## 0.3.1
 
 - Fixed: an open todo's buttons (Mark done, Ask AI and the rest) no longer sit right under Add a step. They have a

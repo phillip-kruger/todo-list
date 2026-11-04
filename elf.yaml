@@ -1,7 +1,7 @@
 # A House Elves elf: what Elf Desk needs to install, set up and run todo-list. AGENTS.md says what each field means.
 name: todo-list
 title: Todo list
-version: 0.3.1
+version: 0.4.0
 author: "@phillip-kruger"
 description: Keeps your todo list on the desk, with who asked, due dates, a checklist, an AI opinion on any item, and GitHub issues created from a todo or its steps in one click.
 main: TodoList.java
@@ -145,6 +145,21 @@ actions:
       id: {pattern: "t[0-9]{10,16}"}
       repo: {pattern: "[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}"}
       number: {kind: int}
+  # Links to Sessions (a chat with a coding agent about the todo), on this machine only: the session keeps its own half.
+  link-session:
+    label: Link a session
+    args: [--action=link-session]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      session: {pattern: "s[0-9]{10,16}"}
+  unlink-session:
+    label: Unlink a session
+    args: [--action=unlink-session]
+    ask: false
+    params:
+      id: {pattern: "t[0-9]{10,16}"}
+      session: {pattern: "s[0-9]{10,16}"}
   # The checklist: steps of a todo, on this machine only.
   save-item:
     label: Save a checklist step

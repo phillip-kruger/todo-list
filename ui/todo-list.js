@@ -5,6 +5,11 @@ import {
     Ticking, elf,
 } from '/elf-kit/1/kit.js';
 
+/** Text in a desk route: only letters, digits and / - . _ ~ % travel, so the rest is %-escaped. */
+function routeText(s) {
+    return encodeURIComponent(s).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 /** Today as yyyy-mm-dd, in local time: delivery dates are days, not instants. */
 function today() {
     const d = new Date();
@@ -71,6 +76,7 @@ class TodoListTab extends LitElement {
         _agents: { state: true },
         _busy: { state: true },
         _expanded: { state: true },
+        _pick: { state: true },
     };
 
     static styles = [shared, markdownStyles, css`
@@ -143,6 +149,12 @@ class TodoListTab extends LitElement {
         .head-title { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         details.done-list > summary { cursor: pointer; font-weight: 600; margin-bottom: 10px; }
         .skeleton.big { height: 30vh; }
+        /* Sessions sends you here to pick the todo a session is about. */
+        .pick { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 14px 18px;
+            border-left: 4px solid var(--accent); }
+        .pick p { margin: 0; }
+        li.pickable { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+        .sessions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 14px; }
         .top-buttons { display: flex; gap: 8px; align-items: center; }
         /* Add todo is a pop-up, so the list keeps the whole page. */
         dialog.add { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; color: var(--ink);
@@ -169,11 +181,62 @@ class TodoListTab extends LitElement {
         this._load();
         // A run started or ended, the list changed, or an agent said something: read again.
         this._off = elf.onChange(() => this._load());
+        this._offRoute = elf.onRoute(r => this._route(r));
+        this._route(elf.route());
     }
 
     disconnectedCallback() {
         this._off?.();
+        this._offRoute?.();
         super.disconnectedCallback();
+    }
+
+    /**
+     * Places Sessions sends you to: pick-session/<session> (pick the todo a session is about) and todo/<id> (one
+     * todo, opened).
+     */
+    async _route(r) {
+        const p = (r ?? '').split('/');
+        this._pick = p[0] === 'pick-session' && /^s[0-9]{10,16}$/.test(p[1] ?? '') ? p[1] : null;
+        if (p[0] === 'todo' && /^t[0-9]{10,16}$/.test(p[1] ?? '')) {
+            this._expanded = { ...this._expanded, [p[1]]: true };
+            for (let i = 0; !this._list && i < 100; i++) await new Promise(res => setTimeout(res, 100));
+            await this.updateComplete;
+            this.renderRoot.querySelector(`[data-todo="${p[1]}"]`)?.scrollIntoView({ block: 'start' });
+        }
+    }
+
+    /** This todo, for the session Sessions sent you from: kept here, then Sessions keeps its half and opens it. */
+    async _linkTo(t) {
+        const session = this._pick;
+        const r = await this._act('link-session', { id: t.id, session }, "Couldn't link it");
+        if (!r) return;
+        this._pick = null;
+        elf.go('', { replace: true });
+        elf.openElf('sessions', `link/${session}/todo-list/${t.id}/${routeText(t.what ?? '')}`).catch(e => { this._error = e.message; });
+    }
+
+    _cancelPick() {
+        const session = this._pick;
+        this._pick = null;
+        elf.go('', { replace: true });
+        elf.openElf('sessions', `s/${session}`).catch(() => {});
+    }
+
+    /**
+     * Start a session: the session's id is made here and kept on the todo first, so the link holds from both sides
+     * once you start it in Sessions (until then, Open session says it isn't there).
+     */
+    async _startSession(t) {
+        const session = `s${Date.now()}`;
+        const r = await this._act('link-session', { id: t.id, session }, "Couldn't start a session");
+        if (!r) return;
+        elf.openElf('sessions', `new/todo-list/${t.id}/${routeText(t.what ?? '')}/${session}`)
+            .catch(() => { this._error = 'Sessions isn\'t on your desk: it comes with the desk, so update the desk.'; });
+    }
+
+    _openSession(session) {
+        elf.openElf('sessions', `s/${session}`).catch(() => { this._error = 'Sessions isn\'t on your desk.'; });
     }
 
     async _load() {
@@ -525,18 +588,29 @@ class TodoListTab extends LitElement {
                     ${!expanded && items.length ? html`<span>Checklist ${items.filter(i => i.done).length} of ${items.length}</span>` : ''}
                     ${!expanded && all.length ? html`<span>${count(all.length, 'issue')}</span>` : ''}
                     ${!expanded && reports.length ? html`<span>${count(reports.length, 'AI report')}</span>` : ''}
+                    ${!expanded && t.sessions?.length ? html`<span>${count(t.sessions.length, 'session')}</span>` : ''}
                 </span>
             </span>
         </button>`;
-        if (!expanded) return html`<li class="panel ${t.done ? 'done' : due}">${head}</li>`;
-        return html`<li class="panel ${t.done ? 'done' : due}">
+        // Picking the todo for a session: each open todo offers itself.
+        if (this._pick && !t.done) {
+            return html`<li class="panel pickable ${due}" data-todo=${t.id}>${head}
+                <button class="primary" ?disabled=${!!this._busy} @click=${() => this._linkTo(t)}>Link to the session</button></li>`;
+        }
+        if (!expanded) return html`<li class="panel ${t.done ? 'done' : due}" data-todo=${t.id}>${head}</li>`;
+        return html`<li class="panel ${t.done ? 'done' : due}" data-todo=${t.id}>
             ${head}
             ${issues.length ? html`<div class="issues">${issues.map(i => this._issueLink(t, i, !t.done))}</div>` : ''}
             ${t.description ? html`<div class="desc md">${markdown(t.description)}</div>` : ''}
             ${this._checklist(t)}
+            ${t.sessions?.length ? html`<div class="sessions">${t.sessions.map((sid, n) => html`<span>
+                <button class="quiet sm" @click=${() => this._openSession(sid)}>${t.sessions.length > 1 ? `Open session ${n + 1}` : 'Open session'}</button>
+                <button class="link" title="The session stays in Sessions" @click=${() => this._act('unlink-session', { id: t.id, session: sid }, "Couldn't unlink it")}>Unlink</button>
+            </span>`)}</div>` : ''}
             <div class="buttons todo-buttons">
                 ${t.done ? html`<button class="quiet" @click=${() => this._act('set-done', { id: t.id, done: false }, "Couldn't change it")}>Not done</button>`
                     : html`<button @click=${() => this._act('set-done', { id: t.id, done: true }, "Couldn't mark it done")}>Mark done</button>
+                        <button class="quiet" @click=${() => this._startSession(t)}>Start a session</button>
                         <button class="quiet" @click=${() => this._openAsk(t)}>Ask AI</button>
                         <button class="quiet" @click=${() => this._openIssue(t)}>Create issue</button>
                         <button class="quiet" @click=${() => this._openLink(t)}>Link issue</button>
@@ -574,6 +648,8 @@ class TodoListTab extends LitElement {
                     note="Checks whether the issues linked to your todos are still open, and updates the overdue flags. Changes nothing on GitHub."
                     @run-finished=${() => this._load()}></elf-run-bar>
                 ${this._error ? html`<p class="error" role="alert">${this._error}</p>` : ''}
+                ${this._pick ? html`<div class="panel pick" role="status"><p>Pick the todo your session is about.</p>
+                    <button class="quiet" @click=${() => this._cancelPick()}>Cancel</button></div>` : ''}
                 <dialog class="add" aria-label="Add todo">${this._fields(this._form, form => { this._form = form; })}</dialog>
                 ${this._loading && !this._list ? html`<div class="skeleton big"></div>`
                     : open.length ? html`<ul>${open.map(t => this._item(t))}</ul>`

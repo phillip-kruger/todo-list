@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  * or links ones that are already there. Its refresh (--save) checks whether the linked issues are still open and
  * removes old done todos; without --save it only prints what it would change (the desk's dry run).
  */
-@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.3.1", description = "Keeps your todo list for Elf Desk")
+@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.4.0", description = "Keeps your todo list for Elf Desk")
 public class TodoList implements Callable<Integer> {
 
     static final ObjectMapper JSON = new ObjectMapper();
@@ -199,6 +199,8 @@ public class TodoList implements Callable<Integer> {
                 case "create-issue" -> createIssue(config, in);
                 case "link-issue" -> linkIssue(config, in);
                 case "unlink-issue" -> unlinkIssue(in);
+                case "link-session" -> linkSession(in);
+                case "unlink-session" -> unlinkSession(in);
                 case "save-item" -> saveItem(in);
                 case "check-item" -> checkItem(in);
                 case "delete-item" -> deleteItem(in);
@@ -238,6 +240,40 @@ public class TodoList implements Callable<Integer> {
             harvest(todos);
             write(TODOS, list);
             return JSON.createObjectNode().put("id", t.path("id").asText());
+        }
+    }
+
+    /**
+     * link-session: a Sessions session about this todo (its id: s and digits). Only the pointer is kept here; the
+     * session, and its own half of the link, are Sessions'.
+     */
+    JsonNode linkSession(JsonNode in) throws IOException {
+        String session = in.path("session").asText("");
+        if (!session.matches("s[0-9]{10,16}")) throw new IllegalArgumentException("Not a session");
+        try (FileLock ignored = lock()) {
+            ObjectNode list = load();
+            ObjectNode t = find((ArrayNode) list.path("todos"), in.path("id").asText(""));
+            ArrayNode sessions = t.withArray("sessions");
+            boolean had = false;
+            for (JsonNode s : sessions) had |= s.asText().equals(session);
+            if (!had) {
+                if (sessions.size() >= 20) throw new IllegalStateException("A todo links at most 20 sessions");
+                sessions.add(session);
+            }
+            write(TODOS, list);
+            return JSON.createObjectNode().put("id", t.path("id").asText()).put("session", session);
+        }
+    }
+
+    JsonNode unlinkSession(JsonNode in) throws IOException {
+        String session = in.path("session").asText("");
+        try (FileLock ignored = lock()) {
+            ObjectNode list = load();
+            ObjectNode t = find((ArrayNode) list.path("todos"), in.path("id").asText(""));
+            ArrayNode sessions = t.withArray("sessions");
+            for (int i = sessions.size() - 1; i >= 0; i--) if (sessions.get(i).asText().equals(session)) sessions.remove(i);
+            write(TODOS, list);
+            return JSON.createObjectNode().put("id", t.path("id").asText()).put("unlinked", session);
         }
     }
 
