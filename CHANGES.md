@@ -3,6 +3,13 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.4.1
+
+- Changed: Start a session sits with Create issue and Link issue, and once a todo has a session it reads Resume
+  session and takes you back to it. It only shows when Sessions is on your desk.
+- Fixed: Start a session and picking a todo for a session work for todos with spaces or punctuation in their name
+  (with desk 0.6.36).
+
 ## 0.4.0
 
 - New: Start a session on a todo opens Sessions (which comes with the desk) with the todo as the session's goal, and

@@ -26,9 +26,10 @@ issues created from a todo or its steps in one click.
   A todo can have as many issues as you like; a step has one.
 - **Link issue:** link an issue that's already there, in one of your repos, by its number. **Unlink** takes it off
   the todo and leaves it on GitHub as it is.
-- **Start a session:** opens [Sessions](https://github.com/House-elves/sessions), which comes with the desk, with the
-  todo as a new chat with a coding agent, and keeps a link to it on the todo: **Open session** takes you back, and
-  **Unlink** takes the link off (the session stays). In Sessions, **Link a todo** brings you here to pick the todo a
+- **Start a session:** next to Link issue, when [Sessions](https://github.com/House-elves/sessions) is on your desk
+  (it comes with the desk). It opens Sessions with the todo as a new chat with a coding agent, and keeps a link to it
+  on the todo: then it reads **Resume session** and takes you back to it, and **Unlink** takes the link off (the
+  session stays). In Sessions, **Link a todo** brings you here to pick the todo a
   session is about. Only the session's id is kept here; the session is Sessions'.
 - **Each weekday morning** (you can turn it off) it checks whether the linked issues are still open, so a todo whose
   issue was closed says so, and updates the overdue flags. Its dashboard card says something like "7 open, 2 overdue",

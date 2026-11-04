@@ -77,6 +77,7 @@ class TodoListTab extends LitElement {
         _busy: { state: true },
         _expanded: { state: true },
         _pick: { state: true },
+        _sessions: { state: true },     // Sessions is on the desk: offer its links
     };
 
     static styles = [shared, markdownStyles, css`
@@ -183,6 +184,8 @@ class TodoListTab extends LitElement {
         this._off = elf.onChange(() => this._load());
         this._offRoute = elf.onRoute(r => this._route(r));
         this._route(elf.route());
+        // Only offer Sessions' links when it's on the desk (a desk too old to say: offer them, and say so if it isn't).
+        elf.hasElf('sessions').then(has => { this._sessions = has; }).catch(() => { this._sessions = true; });
     }
 
     disconnectedCallback() {
@@ -593,7 +596,7 @@ class TodoListTab extends LitElement {
             </span>
         </button>`;
         // Picking the todo for a session: each open todo offers itself.
-        if (this._pick && !t.done) {
+        if (this._pick && !t.done && this._sessions !== false) {
             return html`<li class="panel pickable ${due}" data-todo=${t.id}>${head}
                 <button class="primary" ?disabled=${!!this._busy} @click=${() => this._linkTo(t)}>Link to the session</button></li>`;
         }
@@ -603,17 +606,22 @@ class TodoListTab extends LitElement {
             ${issues.length ? html`<div class="issues">${issues.map(i => this._issueLink(t, i, !t.done))}</div>` : ''}
             ${t.description ? html`<div class="desc md">${markdown(t.description)}</div>` : ''}
             ${this._checklist(t)}
-            ${t.sessions?.length ? html`<div class="sessions">${t.sessions.map((sid, n) => html`<span>
-                <button class="quiet sm" @click=${() => this._openSession(sid)}>${t.sessions.length > 1 ? `Open session ${n + 1}` : 'Open session'}</button>
-                <button class="link" title="The session stays in Sessions" @click=${() => this._act('unlink-session', { id: t.id, session: sid }, "Couldn't unlink it")}>Unlink</button>
-            </span>`)}</div>` : ''}
+            ${t.sessions?.length && this._sessions ? html`<div class="sessions meta">
+                <span>${t.sessions.length > 1 ? `${t.sessions.length} sessions:` : 'A session is linked.'}</span>
+                ${t.sessions.length > 1 ? t.sessions.map((sid, n) => html`<button class="link" @click=${() => this._openSession(sid)}>Session ${n + 1}</button>`) : ''}
+                ${t.sessions.map((sid, n) => html`<button class="link" title="Takes the link off; the session stays in Sessions"
+                    @click=${() => this._act('unlink-session', { id: t.id, session: sid }, "Couldn't unlink it")}>Unlink${t.sessions.length > 1 ? ` ${n + 1}` : ''}</button>`)}
+            </div>` : ''}
             <div class="buttons todo-buttons">
                 ${t.done ? html`<button class="quiet" @click=${() => this._act('set-done', { id: t.id, done: false }, "Couldn't change it")}>Not done</button>`
                     : html`<button @click=${() => this._act('set-done', { id: t.id, done: true }, "Couldn't mark it done")}>Mark done</button>
-                        <button class="quiet" @click=${() => this._startSession(t)}>Start a session</button>
                         <button class="quiet" @click=${() => this._openAsk(t)}>Ask AI</button>
                         <button class="quiet" @click=${() => this._openIssue(t)}>Create issue</button>
                         <button class="quiet" @click=${() => this._openLink(t)}>Link issue</button>
+                        ${this._sessions ? html`<button class="quiet" title=${t.sessions?.length ? 'Go back to the chat with the coding agent about this todo'
+                                : 'Start a chat with a coding agent about this todo, in Sessions'}
+                            @click=${() => t.sessions?.length ? this._openSession(t.sessions.at(-1)) : this._startSession(t)}>
+                            ${t.sessions?.length ? 'Resume session' : 'Start a session'}</button>` : ''}
                         <button class="quiet" @click=${() => { this._editing = { id: t.id, form: { what: t.what ?? '', who: t.who ?? '', description: t.description ?? '', due: t.due ?? '' } }; }}>Edit</button>`}
                 <button class="quiet" @click=${() => this._act('delete-todo', { id: t.id }, "Couldn't delete it")}>Delete</button>
             </div>
