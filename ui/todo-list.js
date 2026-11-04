@@ -185,7 +185,9 @@ class TodoListTab extends LitElement {
         this._offRoute = elf.onRoute(r => this._route(r));
         this._route(elf.route());
         // Only offer Sessions' links when it's on the desk (a desk too old to say: offer them, and say so if it isn't).
-        elf.hasElf('sessions').then(has => { this._sessions = has; }).catch(() => { this._sessions = true; });
+        // (An older desk has no hasElf at all.)
+        (typeof elf.hasElf === 'function' ? elf.hasElf('sessions') : Promise.resolve(true))
+            .then(has => { this._sessions = has; }).catch(() => { this._sessions = true; });
     }
 
     disconnectedCallback() {
@@ -201,7 +203,10 @@ class TodoListTab extends LitElement {
     async _route(r) {
         const p = (r ?? '').split('/');
         this._pick = p[0] === 'pick-session' && /^s[0-9]{10,16}$/.test(p[1] ?? '') ? p[1] : null;
-        if (p[0] === 'todo' && /^t[0-9]{10,16}$/.test(p[1] ?? '')) {
+        // todo/<id>, or todo/<id>.<step> for a session about one step of its checklist.
+        const ref = /^(t[0-9]{10,16})(?:\.c[0-9]{10,16})?$/.exec(p[1] ?? '');
+        if (p[0] === 'todo' && ref) {
+            p[1] = ref[1];
             this._expanded = { ...this._expanded, [p[1]]: true };
             for (let i = 0; !this._list && i < 100; i++) await new Promise(res => setTimeout(res, 100));
             await this.updateComplete;
@@ -230,12 +235,25 @@ class TodoListTab extends LitElement {
      * Start a session: the session's id is made here and kept on the todo first, so the link holds from both sides
      * once you start it in Sessions (until then, Open session says it isn't there).
      */
-    async _startSession(t) {
+    async _startSession(t, item) {
         const session = `s${Date.now()}`;
-        const r = await this._act('link-session', { id: t.id, session }, "Couldn't start a session");
+        const r = await this._act('link-session', { id: t.id, session, ...(item ? { item: item.id } : {}) }, "Couldn't start a session");
         if (!r) return;
-        elf.openElf('sessions', `new/todo-list/${t.id}/${routeText(t.what ?? '')}/${session}`)
-            .catch(() => { this._error = 'Sessions isn\'t on your desk: it comes with the desk, so update the desk.'; });
+        // Only the link and a title travel: Sessions reads the todo itself (its description, checklist and issues)
+        // for the session's goal, which you see and can change before you start it.
+        const ref = item ? `${t.id}.${item.id}` : t.id;
+        elf.openElf('sessions', `new/todo-list/${ref}/${routeText((item ? item.text : t.what) ?? '')}/${session}`)
+            .catch(e => { this._error = `Couldn't open Sessions: ${e.message}. It comes with the desk: update the desk.`; });
+    }
+
+    /** Start a session about the todo (or one step), or Resume the newest one linked to it. */
+    _sessionButton(t, item, cls) {
+        if (!this._sessions || t.done) return '';
+        const linked = (item ?? t).sessions ?? [];
+        return html`<button class=${cls} title=${linked.length ? 'Go back to the chat with the coding agent about this'
+                : 'Start a chat with a coding agent about this, in Sessions'}
+            @click=${() => linked.length ? this._openSession(linked.at(-1)) : this._startSession(t, item)}>
+            ${linked.length ? 'Resume session' : 'Start session'}</button>`;
     }
 
     _openSession(session) {
@@ -544,6 +562,7 @@ class TodoListTab extends LitElement {
                         ${issue ? this._issueLink(t, issue) : open ? html`
                             <button class="link" @click=${() => this._openIssue(t, i.id)}>Create issue</button>
                             <button class="link" @click=${() => this._openLink(t, i.id)}>Link issue</button>` : ''}
+                        ${this._sessionButton(t, i, 'link')}
                         ${open ? html`<button class="link" @click=${() => { this._stepEdit = { item: i.id, text: i.text }; }}>Edit</button>` : ''}
                         <button class="link" @click=${() => this._act('delete-item', { id: t.id, item: i.id }, "Couldn't delete the step")}>Delete</button>
                     </span>
@@ -618,10 +637,7 @@ class TodoListTab extends LitElement {
                         <button class="quiet" @click=${() => this._openAsk(t)}>Ask AI</button>
                         <button class="quiet" @click=${() => this._openIssue(t)}>Create issue</button>
                         <button class="quiet" @click=${() => this._openLink(t)}>Link issue</button>
-                        ${this._sessions ? html`<button class="quiet" title=${t.sessions?.length ? 'Go back to the chat with the coding agent about this todo'
-                                : 'Start a chat with a coding agent about this todo, in Sessions'}
-                            @click=${() => t.sessions?.length ? this._openSession(t.sessions.at(-1)) : this._startSession(t)}>
-                            ${t.sessions?.length ? 'Resume session' : 'Start a session'}</button>` : ''}
+                        ${this._sessionButton(t, null, 'quiet')}
                         <button class="quiet" @click=${() => { this._editing = { id: t.id, form: { what: t.what ?? '', who: t.who ?? '', description: t.description ?? '', due: t.due ?? '' } }; }}>Edit</button>`}
                 <button class="quiet" @click=${() => this._act('delete-todo', { id: t.id }, "Couldn't delete it")}>Delete</button>
             </div>

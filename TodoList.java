@@ -46,7 +46,7 @@ import java.util.regex.Pattern;
  * or links ones that are already there. Its refresh (--save) checks whether the linked issues are still open and
  * removes old done todos; without --save it only prints what it would change (the desk's dry run).
  */
-@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.4.1", description = "Keeps your todo list for Elf Desk")
+@Command(name = "todo-list", mixinStandardHelpOptions = true, version = "0.4.2", description = "Keeps your todo list for Elf Desk")
 public class TodoList implements Callable<Integer> {
 
     static final ObjectMapper JSON = new ObjectMapper();
@@ -253,7 +253,7 @@ public class TodoList implements Callable<Integer> {
         try (FileLock ignored = lock()) {
             ObjectNode list = load();
             ObjectNode t = find((ArrayNode) list.path("todos"), in.path("id").asText(""));
-            ArrayNode sessions = t.withArray("sessions");
+            ArrayNode sessions = sessionsOf(t, in.path("item").asText(""));
             boolean had = false;
             for (JsonNode s : sessions) had |= s.asText().equals(session);
             if (!had) {
@@ -265,12 +265,21 @@ public class TodoList implements Callable<Integer> {
         }
     }
 
+    /** The sessions linked to the todo, or to one step of its checklist. */
+    static ArrayNode sessionsOf(ObjectNode t, String item) {
+        if (item.isEmpty()) return t.withArray("sessions");
+        for (JsonNode i : t.path("checklist")) {
+            if (i.path("id").asText().equals(item)) return ((ObjectNode) i).withArray("sessions");
+        }
+        throw new IllegalArgumentException("That step isn't on the todo any more");
+    }
+
     JsonNode unlinkSession(JsonNode in) throws IOException {
         String session = in.path("session").asText("");
         try (FileLock ignored = lock()) {
             ObjectNode list = load();
             ObjectNode t = find((ArrayNode) list.path("todos"), in.path("id").asText(""));
-            ArrayNode sessions = t.withArray("sessions");
+            ArrayNode sessions = sessionsOf(t, in.path("item").asText(""));
             for (int i = sessions.size() - 1; i >= 0; i--) if (sessions.get(i).asText().equals(session)) sessions.remove(i);
             write(TODOS, list);
             return JSON.createObjectNode().put("id", t.path("id").asText()).put("unlinked", session);

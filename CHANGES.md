@@ -3,6 +3,12 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.4.2
+
+- New: Start session on each step of a checklist, next to Create issue and Link issue, as well as on the todo. The
+  session starts with the todo's description, checklist and issues (Sessions 0.4.0).
+- Fixed: Start session shows on a desk too old to say whether Sessions is there, instead of not at all.
+
 ## 0.4.1
 
 - Changed: Start a session sits with Create issue and Link issue, and once a todo has a session it reads Resume
