@@ -329,7 +329,7 @@ class TodoListTab extends LitElement {
         return html`<form @submit=${e => this._save(e, form, id)}>
             ${id ? '' : html`<h2>Add todo</h2>`}
             <label>What you have to do
-                <input required maxlength="300" ?autofocus=${!id} .value=${form.what} @input=${e => set({ ...form, what: e.target.value })}></label>
+                <input required maxlength="300" ?autofocus=${!id} .value=${form.what} @input=${e => set({ ...form, what: e.target.value })}><elf-mic></elf-mic></label>
             <div class="row">
                 <label>Who asked (optional)
                     <input maxlength="100" .value=${form.who} @input=${e => set({ ...form, who: e.target.value })}></label>
@@ -337,7 +337,7 @@ class TodoListTab extends LitElement {
                     <input type="date" .value=${form.due} @input=${e => set({ ...form, due: e.target.value })}></label>
             </div>
             <label>Description (optional, Markdown)
-                <textarea maxlength="20000" .value=${form.description} @input=${e => set({ ...form, description: e.target.value })}></textarea></label>
+                <textarea maxlength="20000" .value=${form.description} @input=${e => set({ ...form, description: e.target.value })}></textarea><elf-mic></elf-mic></label>
             <div class="buttons">
                 <button type="submit" ?disabled=${!form.what.trim() || this._busy === (id ?? 'add')}>${id ? 'Save' : 'Add todo'}</button>
                 <button type="button" class="quiet" @click=${() => { if (id) this._editing = null; else this._closeAdd(); }}>Cancel</button>
@@ -465,7 +465,7 @@ class TodoListTab extends LitElement {
                     ${this._repos.map(r => html`<option value=${r} ?selected=${i.repo === r}>${r}</option>`)}
                 </select></label>
             <label>Title <input maxlength="256" .value=${i.title} @input=${e => set({ title: e.target.value })}></label>
-            <label>Body (Markdown) <textarea class="body" maxlength="60000" .value=${i.body} @input=${e => set({ body: e.target.value })}></textarea></label>
+            <label>Body (Markdown) <textarea class="body" maxlength="60000" .value=${i.body} @input=${e => set({ body: e.target.value })}></textarea><elf-mic></elf-mic></label>
             <div class="buttons">
                 <button ?disabled=${!i.title.trim() || !i.repo || i.creating} @click=${() => this._createIssue()}>Create issue</button>
                 <button class="quiet" @click=${() => { this._issue = null; }}>Cancel</button>

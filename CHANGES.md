@@ -3,6 +3,11 @@
 What changed for you in each version of Todo list, newest first. The desk shows the parts that are new when it
 offers you an update.
 
+## 0.5.0
+
+- New: voice input. 🎤 next to what you have to do, a todo's description and a new issue's body: say it, and the words go in at the cursor. The desk listens, with your browser's speech recognition or Whisper on its
+  machine. Needs Elf Desk 0.6.42.
+
 ## 0.4.2
 
 - New: Start session on each step of a checklist, next to Create issue and Link issue, as well as on the todo. The
